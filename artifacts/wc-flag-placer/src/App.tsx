@@ -143,6 +143,8 @@ interface DragState {
   origYPct: number;
   origWPct: number;
   origHPct: number;
+  deltaXPct?: number;
+  deltaYPct?: number;
   corner?: "nw" | "ne" | "sw" | "se";
 }
 
@@ -150,12 +152,41 @@ interface DragState {
 export default function App() {
   const canvasRef  = useRef<HTMLDivElement>(null);
   const dragRef    = useRef<DragState | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const pendingUpdateRef = useRef<null | ((prev: PlacedFlag[]) => PlacedFlag[])>(null);
+  const pendingRenderRef = useRef(false);
+  const [, setRenderTick] = useState(0);
   const [flags, setFlags]       = useState<PlacedFlag[]>(INITIAL_FLAGS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exporting, setExporting]   = useState(false);
 
   // ── Global pointer handlers (registered once) ─────────────────────────────
   useEffect(() => {
+    const scheduleUpdate = (updater: (prev: PlacedFlag[]) => PlacedFlag[]) => {
+      pendingUpdateRef.current = updater;
+      if (rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          if (!pendingUpdateRef.current) return;
+          setFlags(prev => {
+            const next = pendingUpdateRef.current;
+            pendingUpdateRef.current = null;
+            return next ? next(prev) : prev;
+          });
+        });
+      }
+    };
+
+    const scheduleRender = () => {
+      if (pendingRenderRef.current) return;
+      pendingRenderRef.current = true;
+      rafRef.current = requestAnimationFrame(() => {
+        pendingRenderRef.current = false;
+        rafRef.current = null;
+        setRenderTick(t => t + 1);
+      });
+    };
+
     const onMove = (ev: PointerEvent) => {
       const ds = dragRef.current;
       const canvas = canvasRef.current;
@@ -167,14 +198,11 @@ export default function App() {
       const ddy = (ev.clientY - ds.startCY) / ch * 100;
 
       if (ds.type === "move") {
-        setFlags(prev => prev.map(f =>
-          f.id === ds.id
-            ? { ...f, xPct: ds.origXPct + ddx, yPct: ds.origYPct + ddy }
-            : f
-        ));
+        ds.deltaXPct = ddx;
+        ds.deltaYPct = ddy;
+        scheduleRender();
       } else {
-        // resize
-        setFlags(prev => prev.map(f => {
+        scheduleUpdate(prev => prev.map(f => {
           if (f.id !== ds.id) return f;
           let nx = ds.origXPct, ny = ds.origYPct;
           let nw = ds.origWPct, nh = ds.origHPct;
@@ -197,13 +225,35 @@ export default function App() {
       }
     };
 
-    const onUp = () => { dragRef.current = null; };
+    const onUp = () => {
+      const ds = dragRef.current;
+      if (ds?.type === "move") {
+        const deltaXPct = ds.deltaXPct ?? 0;
+        const deltaYPct = ds.deltaYPct ?? 0;
+        setFlags(prev => prev.map(f =>
+          f.id === ds.id
+            ? { ...f, xPct: ds.origXPct + deltaXPct, yPct: ds.origYPct + deltaYPct }
+            : f
+        ));
+      }
+      dragRef.current = null;
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      pendingUpdateRef.current = null;
+      pendingRenderRef.current = false;
+    };
 
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      pendingUpdateRef.current = null;
     };
   }, []);
 
@@ -217,6 +267,7 @@ export default function App() {
       startCX: e.clientX, startCY: e.clientY,
       origXPct: flag.xPct, origYPct: flag.yPct,
       origWPct: flag.wPct, origHPct: flag.hPct,
+      deltaXPct: 0, deltaYPct: 0,
     };
   };
 
@@ -300,6 +351,10 @@ export default function App() {
                 top:    `${flag.yPct}%`,
                 width:  `${flag.wPct}%`,
                 height: `${flag.hPct}%`,
+                transform:
+                  flag.id === selectedId && dragRef.current?.type === "move" && dragRef.current.id === flag.id
+                    ? `translate(${dragRef.current.deltaXPct}%, ${dragRef.current.deltaYPct}%)`
+                    : undefined,
               }}
               onPointerDown={e => startMove(e, flag)}
               onClick={e => { e.stopPropagation(); setSelectedId(flag.id); }}
