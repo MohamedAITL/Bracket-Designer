@@ -1,45 +1,42 @@
-# [Project name]
+# World Cup Flag Placer
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A simple drag-and-drop web tool for journalists to place national flags onto a World Cup bracket design and export the final graphic as a PNG image.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/wc-flag-placer run dev` — run the Flag Placer app (port 23279)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Frontend: React 18, Vite, Tailwind CSS
 - API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- DB: PostgreSQL + Drizzle ORM (not used by the flag placer)
+- Export: html2canvas
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
-
-## Architecture decisions
-
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- `artifacts/wc-flag-placer/` — the flag placer web app
+- `artifacts/wc-flag-placer/public/background.jpg` — the World Cup bracket background image
+- `artifacts/wc-flag-placer/public/flags/` — all 48 national flag PNG assets
+- `artifacts/wc-flag-placer/src/App.tsx` — main app component with all drag/resize/export logic
+- `artifacts/api-server/` — shared Express API server (not used by this app)
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The app displays the World Cup bracket background as a full canvas. Users drag flags from a horizontal picker strip onto the bracket, then reposition and resize each flag as needed. A one-click Export PNG button downloads the composed image. A Reset button clears all placed flags.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- No sidebar — only the background image and flags
+- Desktop-focused
+- Keep the interface extremely simple: top toolbar = Export + Reset only
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Flag filenames contain spaces and special characters — always use `encodeURIComponent()` when building `/flags/` URLs
+- html2canvas `scale: 2` is used for export so the output is 2× resolution
+- The flag picker horizontal strip is a separate row (not a sidebar) to keep the bracket fully visible

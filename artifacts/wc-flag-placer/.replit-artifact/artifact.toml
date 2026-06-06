@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "World Cup Flag Placer"
+version = "1.0.0"
+id = "artifacts/wc-flag-placer"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23279
+
+[services.development]
+run = "pnpm --filter @workspace/wc-flag-placer run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/wc-flag-placer", "run", "build" ]
+publicDir = "artifacts/wc-flag-placer/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23279"
+BASE_PATH = "/"
