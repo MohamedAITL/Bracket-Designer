@@ -96,6 +96,42 @@ function getGroupOffset(letter: string): [number, number] {
   return [offsetX, offsetY];
 }
 
+type BoxSlot = {
+  group: string;
+  xPct: number;
+  yPct: number;
+};
+
+const BOX_SLOTS: BoxSlot[] = Object.entries(GROUP_GRID).flatMap(
+  ([letter, [row, col]]) => {
+    const [offsetX, offsetY] = getGroupOffset(letter);
+    const bx = COL_LEFT[col] + offsetX;
+    const by = ROW_TOP[row] + offsetY;
+    return SLOT_DX.flatMap((dx) =>
+      SLOT_DY.map((dy) => ({
+        group: letter,
+        xPct: xp(bx + dx),
+        yPct: yp(by + dy),
+      })),
+    );
+  },
+);
+
+function getNearestSlot(xPct: number, yPct: number): BoxSlot {
+  let best = BOX_SLOTS[0];
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const slot of BOX_SLOTS) {
+    const dx = slot.xPct - xPct;
+    const dy = slot.yPct - yPct;
+    const dist = dx * dx + dy * dy;
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      best = slot;
+    }
+  }
+  return best;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PlacedFlag {
   id: string;
@@ -160,6 +196,8 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exporting, setExporting]   = useState(false);
 
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
   // ── Global pointer handlers (registered once) ─────────────────────────────
   useEffect(() => {
     const scheduleUpdate = (updater: (prev: PlacedFlag[]) => PlacedFlag[]) => {
@@ -188,40 +226,45 @@ export default function App() {
     };
 
     const onMove = (ev: PointerEvent) => {
-      const ds = dragRef.current;
       const canvas = canvasRef.current;
-      if (!ds || !canvas) return;
+      if (!canvas) return;
+      const ds = dragRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const pointerXPct = ((ev.clientX - rect.left) / rect.width) * 100;
+      const pointerYPct = ((ev.clientY - rect.top) / rect.height) * 100;
 
-      const cw = canvas.clientWidth;
-      const ch = canvas.clientHeight;
-      const ddx = (ev.clientX - ds.startCX) / cw * 100;
-      const ddy = (ev.clientY - ds.startCY) / ch * 100;
+      if (ds) {
+        const cw = canvas.clientWidth;
+        const ch = canvas.clientHeight;
+        const ddx = (ev.clientX - ds.startCX) / cw * 100;
+        const ddy = (ev.clientY - ds.startCY) / ch * 100;
 
-      if (ds.type === "move") {
-        ds.deltaXPct = ddx;
-        ds.deltaYPct = ddy;
-        scheduleRender();
-      } else {
-        scheduleUpdate(prev => prev.map(f => {
-          if (f.id !== ds.id) return f;
-          let nx = ds.origXPct, ny = ds.origYPct;
-          let nw = ds.origWPct, nh = ds.origHPct;
-          const min = 0.5;
-          if (ds.corner === "se") {
-            nw = Math.max(min, ds.origWPct + ddx);
-            nh = Math.max(min, ds.origHPct + ddy);
-          } else if (ds.corner === "sw") {
-            nw = Math.max(min, ds.origWPct - ddx); nx = ds.origXPct + ds.origWPct - nw;
-            nh = Math.max(min, ds.origHPct + ddy);
-          } else if (ds.corner === "ne") {
-            nw = Math.max(min, ds.origWPct + ddx);
-            nh = Math.max(min, ds.origHPct - ddy); ny = ds.origYPct + ds.origHPct - nh;
-          } else if (ds.corner === "nw") {
-            nw = Math.max(min, ds.origWPct - ddx); nx = ds.origXPct + ds.origWPct - nw;
-            nh = Math.max(min, ds.origHPct - ddy); ny = ds.origYPct + ds.origHPct - nh;
-          }
-          return { ...f, xPct: nx, yPct: ny, wPct: nw, hPct: nh };
-        }));
+        if (ds.type === "move") {
+          ds.deltaXPct = ddx;
+          ds.deltaYPct = ddy;
+          scheduleRender();
+        } else {
+          scheduleUpdate(prev => prev.map(f => {
+            if (f.id !== ds.id) return f;
+            let nx = ds.origXPct, ny = ds.origYPct;
+            let nw = ds.origWPct, nh = ds.origHPct;
+            const min = 0.5;
+            if (ds.corner === "se") {
+              nw = Math.max(min, ds.origWPct + ddx);
+              nh = Math.max(min, ds.origHPct + ddy);
+            } else if (ds.corner === "sw") {
+              nw = Math.max(min, ds.origWPct - ddx); nx = ds.origXPct + ds.origWPct - nw;
+              nh = Math.max(min, ds.origHPct + ddy);
+            } else if (ds.corner === "ne") {
+              nw = Math.max(min, ds.origWPct + ddx);
+              nh = Math.max(min, ds.origHPct - ddy); ny = ds.origYPct + ds.origHPct - nh;
+            } else if (ds.corner === "nw") {
+              nw = Math.max(min, ds.origWPct - ddx); nx = ds.origXPct + ds.origWPct - nw;
+              nh = Math.max(min, ds.origHPct - ddy); ny = ds.origYPct + ds.origHPct - nh;
+            }
+            return { ...f, xPct: nx, yPct: ny, wPct: nw, hPct: nh };
+          }));
+        }
       }
     };
 
@@ -295,13 +338,32 @@ export default function App() {
       if (selectedId && (e.key === "Delete" || e.key === "Backspace") && !(e.target instanceof HTMLInputElement)) {
         deleteFlag(selectedId);
       }
-      if (e.key === "Escape") setSelectedId(null);
+      if (e.key === "Escape") {
+        setSelectedId(null);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedId]);
 
   // ── Export ───────────────────────────────────────────────────────────────
+  const placeSelectedFlag = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !selectedId) return;
+    const rect = canvas.getBoundingClientRect();
+    const clickXPct = ((clientX - rect.left) / rect.width) * 100;
+    const clickYPct = ((clientY - rect.top) / rect.height) * 100;
+    setFlags(prev => prev.map(f =>
+      f.id === selectedId
+        ? {
+            ...f,
+            xPct: clamp(clickXPct - f.wPct / 2, 0, 100 - f.wPct),
+            yPct: clamp(clickYPct - f.hPct / 2, 0, 100 - f.hPct),
+          }
+        : f,
+    ));
+  };
+
   const handleExport = async () => {
     if (!canvasRef.current) return;
     setExporting(true);
@@ -338,7 +400,21 @@ export default function App() {
         <div
           ref={canvasRef}
           className="bracket-canvas"
-          onClick={e => { if (!(e.target as HTMLElement).closest(".placed-flag")) setSelectedId(null); }}
+          onClick={e => {
+            if ((e.target as HTMLElement).closest(".placed-flag")) return;
+            if (selectedId) {
+              placeSelectedFlag(e.clientX, e.clientY);
+              return;
+            }
+            setSelectedId(null);
+          }}
+          onPointerUp={e => {
+            if ((e.target as HTMLElement).closest(".placed-flag")) return;
+            if (dragRef.current) return;
+            if (selectedId) {
+              placeSelectedFlag(e.clientX, e.clientY);
+            }
+          }}
         >
           <img src={`${BASE}background.jpg`} alt="World Cup Bracket" className="bg-image" draggable={false} />
 
@@ -357,7 +433,10 @@ export default function App() {
                     : undefined,
               }}
               onPointerDown={e => startMove(e, flag)}
-              onClick={e => { e.stopPropagation(); setSelectedId(flag.id); }}
+              onClick={e => {
+                e.stopPropagation();
+                setSelectedId(flag.id);
+              }}
             >
               <img src={flag.src} alt={flag.name} draggable={false}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }} />
