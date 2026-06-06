@@ -106,25 +106,19 @@ export default function App() {
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       if (!dragSrc.current || !dragName.current) return;
+      const src = dragSrc.current;
+      const name = dragName.current;
+      dragSrc.current = null;
+      dragName.current = null;
       const rect = canvasRef.current!.getBoundingClientRect();
       const x = e.clientX - rect.left - 40;
       const y = e.clientY - rect.top - 30;
       const id = String(nextId++);
       setFlags((prev) => [
         ...prev,
-        {
-          id,
-          src: dragSrc.current!,
-          name: dragName.current!.replace(".png", ""),
-          x,
-          y,
-          width: 80,
-          height: 60,
-        },
+        { id, src, name: name.replace(".png", ""), x, y, width: 80, height: 60 },
       ]);
       setSelectedId(id);
-      dragSrc.current = null;
-      dragName.current = null;
     },
     []
   );
