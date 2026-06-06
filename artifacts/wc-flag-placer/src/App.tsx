@@ -13,8 +13,8 @@ const COL_LEFT = [740, 918, 1093]; // left edge of each column
 const ROW_TOP  = [103, 232, 360, 488]; // top edge of each row
 
 // Flag size in image pixels (small enough to fit inside the slot cards)
-const FLAG_W = 48;
-const FLAG_H = 28;
+const FLAG_W = 32;
+const FLAG_H = 18;
 
 // 2×2 slot grid within each group box (offsets from box left/top)
 const SLOT_DX = [8, 72];   // flag left edge at box_left + dx
@@ -221,18 +221,6 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <div className="toolbar">
-        <span className="toolbar-title">⚽ WC Flag Placer</span>
-        <div className="toolbar-actions">
-          <button className="btn btn-reset" onClick={() => { setFlags(INITIAL_FLAGS); setSelectedId(null); }}>
-            Reset
-          </button>
-          <button className="btn btn-export" onClick={handleExport} disabled={exporting}>
-            {exporting ? "Exporting…" : "Export PNG"}
-          </button>
-        </div>
-      </div>
-
       <div className="canvas-wrap">
         <div
           ref={canvasRef}
@@ -273,6 +261,15 @@ export default function App() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="toolbar">
+        <button className="btn btn-reset" onClick={() => { setFlags(INITIAL_FLAGS); setSelectedId(null); }}>
+          Reset
+        </button>
+        <button className="btn btn-export" onClick={handleExport} disabled={exporting}>
+          {exporting ? "Exporting…" : "Export PNG"}
+        </button>
       </div>
     </div>
   );
