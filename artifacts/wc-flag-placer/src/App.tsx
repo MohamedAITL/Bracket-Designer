@@ -47,6 +47,55 @@ const GROUP_GRID: Record<string, [number, number]> = {
   J:[3,0], K:[3,1], L:[3,2],
 };
 
+function getGroupOffset(letter: string): [number, number] {
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (/[ADGJ]/.test(letter)) {
+    offsetX = 50;
+    offsetY = 20;
+  } else if (/[BEHK]/.test(letter)) {
+    offsetX = 0;
+    offsetY = 20;
+  } else if (/[CFIL]/.test(letter)) {
+    offsetX = -50;
+    offsetY = 20;
+  }
+
+  if (/[ABC]/.test(letter)) {
+    offsetY -= 10;
+  }
+  if (letter === "A") {
+    offsetX -= 10;
+  }
+  if (/[CFL]/.test(letter)) {
+    offsetX += 10;
+  }
+  if (letter === "C") {
+    offsetX += 10;
+  }
+  if (letter === "F") {
+    offsetX += 10;
+  }
+  if (letter === "I") {
+    offsetX += 20;
+  }
+  if (letter === "L") {
+    offsetX += 10;
+  }
+  if (/[DGJ]/.test(letter)) {
+    offsetX -= 10;
+  }
+  if (letter === "E") {
+    offsetX += 5;
+  }
+  if (/[JKL]/.test(letter)) {
+    offsetY += 10;
+  }
+
+  return [offsetX, offsetY];
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PlacedFlag {
   id: string;
@@ -63,8 +112,9 @@ function buildInitialFlags(): PlacedFlag[] {
   const out: PlacedFlag[] = [];
   for (const [letter, [row, col]] of Object.entries(GROUP_GRID)) {
     GROUPS[letter].forEach((file, i) => {
-      const bx = COL_LEFT[col];
-      const by = ROW_TOP[row];
+      const [offsetX, offsetY] = getGroupOffset(letter);
+      const bx = COL_LEFT[col] + offsetX;
+      const by = ROW_TOP[row] + offsetY;
       const sc = i % 2;            // slot column 0/1
       const sr = Math.floor(i / 2); // slot row    0/1
       out.push({

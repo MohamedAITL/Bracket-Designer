@@ -1,0 +1,8 @@
+[build]
+  command = "BASE_PATH=/ pnpm --filter ./artifacts/wc-flag-placer build"
+  publish = "artifacts/wc-flag-placer/dist/public"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
