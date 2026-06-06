@@ -221,6 +221,18 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <div className="toolbar">
+        <span className="toolbar-logo">⚽ WC Flag Placer</span>
+        <div className="toolbar-actions">
+          <button className="btn btn-reset" onClick={() => { setFlags(INITIAL_FLAGS); setSelectedId(null); }}>
+            Reset
+          </button>
+          <button className="btn btn-export" onClick={handleExport} disabled={exporting}>
+            {exporting ? "Exporting…" : "Export PNG"}
+          </button>
+        </div>
+      </div>
+
       <div className="canvas-wrap">
         <div
           ref={canvasRef}
@@ -263,14 +275,6 @@ export default function App() {
         </div>
       </div>
 
-      <div className="toolbar">
-        <button className="btn btn-reset" onClick={() => { setFlags(INITIAL_FLAGS); setSelectedId(null); }}>
-          Reset
-        </button>
-        <button className="btn btn-export" onClick={handleExport} disabled={exporting}>
-          {exporting ? "Exporting…" : "Export PNG"}
-        </button>
-      </div>
     </div>
   );
 }

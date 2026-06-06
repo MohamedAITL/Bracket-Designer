@@ -42,18 +42,29 @@ html, body, #root {
   user-select: none;
 }
 
-/* ── Bottom toolbar ── */
+/* ── Top toolbar ── */
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 6px 16px;
+  justify-content: space-between;
+  padding: 0 14px;
   height: 40px;
-  background: rgba(0,0,0,0.85);
-  border-top: 1px solid #30363d;
+  background: rgba(0,0,0,0.88);
+  border-bottom: 1px solid #2a2a2a;
   flex-shrink: 0;
   z-index: 20;
+}
+
+.toolbar-logo {
+  font-size: 13px;
+  font-weight: 700;
+  color: #aaa;
+  letter-spacing: .02em;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .btn {
