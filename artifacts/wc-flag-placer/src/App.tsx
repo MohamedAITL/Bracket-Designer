@@ -15,6 +15,7 @@ const FLAG_FILES = [
   "Cape Verde.png",
   "Colombia.png",
   "Croatia.png",
+  "Curacao.png",
   "DRK.png",
   "Czech Repuplic.png",
   "Ecuador.png",
@@ -81,6 +82,20 @@ export default function App() {
   const filteredFlags = FLAG_FILES.filter((f) =>
     f.toLowerCase().replace(".png", "").includes(search.toLowerCase())
   );
+
+  const addFlagAtCenter = useCallback((name: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = rect.width / 2 - 40 + (Math.random() - 0.5) * 60;
+    const y = rect.height / 2 - 30 + (Math.random() - 0.5) * 60;
+    const id = String(nextId++);
+    setFlags((prev) => [
+      ...prev,
+      { id, src: flagUrl(name), name: name.replace(".png", ""), x, y, width: 80, height: 60 },
+    ]);
+    setSelectedId(id);
+  }, []);
 
   const handleDragStart = (name: string) => {
     dragSrc.current = flagUrl(name);
@@ -307,7 +322,8 @@ export default function App() {
             className="flag-thumb"
             draggable
             onDragStart={() => handleDragStart(name)}
-            title={name.replace(".png", "")}
+            onClick={() => addFlagAtCenter(name)}
+            title={`${name.replace(".png", "")} — click to add, drag to place`}
           >
             <img
               src={flagUrl(name)}
